@@ -1,0 +1,12 @@
+# Netlify config for CTO Simulator (SPA)
+# Build and deploy from this directory as root in Netlify dashboard.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA: serve index.html for all routes so React Router works on refresh / direct links
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

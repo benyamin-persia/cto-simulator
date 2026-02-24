@@ -1,11 +1,14 @@
 /**
  * App: root component. Sets up React Router and game layout.
  * Routes: /login (auth), / (home), /level/:id (levels 1–6), /final (summary).
- * Game routes require login; game state is persisted per user in localStorage.
+ * Firebase Auth: same account works from any device; onAuthStateChanged syncs user and loads game.
  */
 
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useParams, Navigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase/config';
+import { useAuthStore } from './store/authStore';
 import { useGameStore } from './store/gameStore';
 import { GameLayout } from './components/GameLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -20,6 +23,23 @@ import { Level4Git } from './levels/Level4Git';
 import { Level5CICD } from './levels/Level5CICD';
 import { Level6Documentation } from './levels/Level6Documentation';
 import type { LevelId } from './types/game';
+
+/** Sync Firebase auth state to store and load this user's game when they're logged in. */
+function useAuthSync() {
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      const setCurrentUser = useAuthStore.getState().setCurrentUser;
+      const loadGameForUser = useGameStore.getState().loadGameForUser;
+      if (user) {
+        setCurrentUser({ uid: user.uid, email: user.email ?? null });
+        loadGameForUser(user.uid);
+      } else {
+        setCurrentUser(null);
+      }
+    });
+    return () => unsub();
+  }, []);
+}
 
 function LevelRoute() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +75,8 @@ function LevelRoute() {
 }
 
 export default function App() {
+  useAuthSync();
+
   return (
     <BrowserRouter>
       <ResetKeyHandler />

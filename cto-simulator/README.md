@@ -26,10 +26,29 @@ npm run preview
 - **Tailwind CSS** (v4) for styling
 - **React Router** for navigation
 - **Framer Motion** for animations
-- **Zustand** for game state (with localStorage persistence)
+- **Zustand** for game state (with localStorage persistence per user)
+- **Firebase Auth** for sign-in (same account works from any device)
 - **@dnd-kit** for drag-and-drop (Level 1 WBS)
 
-No backend; progress is stored in `localStorage`.
+Progress is stored in `localStorage` per user (keyed by Firebase UID). No backend besides Firebase for auth.
+
+## Firebase setup (required for login)
+
+1. Create a project at [Firebase Console](https://console.firebase.google.com).
+2. Enable **Authentication** → **Sign-in method** → **Email/Password**.
+3. In Project settings → Your apps, add a web app and copy the config.
+4. Copy `.env.example` to `.env` and set:
+
+   ```
+   VITE_FIREBASE_API_KEY=...
+   VITE_FIREBASE_AUTH_DOMAIN=...
+   VITE_FIREBASE_PROJECT_ID=...
+   VITE_FIREBASE_STORAGE_BUCKET=...
+   VITE_FIREBASE_MESSAGING_SENDER_ID=...
+   VITE_FIREBASE_APP_ID=...
+   ```
+
+5. Restart the dev server. Sign up and log in with email/password; the same account works on any device.
 
 ## Project structure
 

@@ -1,6 +1,6 @@
 /**
- * Login / Sign up page. All auth is local (localStorage + JSON); no server or DB.
- * After login/signup we load this user's game state and redirect to home.
+ * Login / Sign up via Firebase Auth. Same account works from any device.
+ * After login/signup we load this user's game state (by uid) and redirect home.
  */
 
 import { useState, useEffect } from 'react';
@@ -8,12 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
+import { auth } from '../firebase/config';
 
 type Mode = 'login' | 'signup';
 
 export function LoginPage() {
   const [mode, setMode] = useState<Mode>('login');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,12 +36,11 @@ export function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const result = mode === 'login' ? await login(username, password) : await signUp(username, password);
-      if (result.ok) {
-        const user = username.trim().toLowerCase();
-        loadGameForUser(user);
+      const result = mode === 'login' ? await login(email, password) : await signUp(email, password);
+      if (result.ok && auth.currentUser) {
+        loadGameForUser(auth.currentUser.uid);
         navigate('/', { replace: true });
-      } else {
+      } else if (!result.ok) {
         setError(result.error ?? 'Something went wrong');
       }
     } finally {
@@ -58,7 +58,7 @@ export function LoginPage() {
       >
         <h1 className="mb-1 text-xl font-bold text-[var(--text-primary)]">CTO Simulator</h1>
         <p className="mb-6 text-sm text-[var(--text-muted)]">
-          Sign in or create an account. Progress is saved per user on this device.
+          Sign in or create an account. Use the same email on any device to continue your progress.
         </p>
 
         <div className="mb-4 flex gap-2 rounded-lg bg-[var(--bg-card)] p-1">
@@ -84,17 +84,17 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="username" className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
-              Username
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+              Email
             </label>
             <input
-              id="username"
-              type="text"
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[var(--text-primary)] focus:border-[var(--accent-neon)] focus:outline-none"
-              placeholder="e.g. alice"
+              placeholder="you@example.com"
             />
           </div>
           <div>

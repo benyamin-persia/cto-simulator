@@ -1,27 +1,20 @@
 /**
  * Global game state using Zustand.
- * Persists to localStorage so progress survives refresh.
- * When a user is logged in, state is stored per user (cto-simulator-game-${username}).
+ * Persists to localStorage per user (cto-simulator-game-${uid}) when logged in via Firebase.
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LevelId, GameState, LevelConfig } from '../types/game';
 import { DEFAULT_LEVELS, INITIAL_HEALTH, MAX_HEALTH, MIN_HEALTH } from '../types/game';
+import { auth } from '../firebase/config';
 
 const STORAGE_KEY = 'cto-simulator-game';
 
-/** Get current user from auth localStorage so we can pick the right game key (no circular store dep). */
+/** Use Firebase auth.currentUser?.uid so the same key is used on every device for this user. */
 function getGameStorageKey(): string {
-  try {
-    const raw = localStorage.getItem('cto-simulator-auth');
-    if (!raw) return STORAGE_KEY;
-    const parsed = JSON.parse(raw) as { state?: { currentUser?: string | null } };
-    const user = parsed?.state?.currentUser;
-    return user ? `${STORAGE_KEY}-${user}` : STORAGE_KEY;
-  } catch {
-    return STORAGE_KEY;
-  }
+  const user = auth.currentUser;
+  return user ? `${STORAGE_KEY}-${user.uid}` : STORAGE_KEY;
 }
 
 const gameStorage = {
@@ -76,8 +69,8 @@ export interface GameStore extends GameState {
   getLevelResetKey: (levelId: LevelId) => number;
   resetGame: () => void;
   getLevel: (id: LevelId) => LevelConfig;
-  /** Load saved game for a user (call after login). No-op if no saved state. */
-  loadGameForUser: (username: string) => void;
+  /** Load saved game for this user (call when Firebase auth state becomes a user). No-op if no saved state. */
+  loadGameForUser: (uid: string) => void;
 }
 
 const initialState: GameState = {
@@ -189,9 +182,9 @@ export const useGameStore = create<GameStore>()(
         return get().levels[id];
       },
 
-      loadGameForUser(username: string) {
+      loadGameForUser(uid: string) {
         try {
-          const key = `${STORAGE_KEY}-${username}`;
+          const key = `${STORAGE_KEY}-${uid}`;
           const raw = localStorage.getItem(key);
           if (!raw) return;
           const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };

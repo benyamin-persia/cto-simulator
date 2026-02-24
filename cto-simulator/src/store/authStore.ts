@@ -1,70 +1,76 @@
 /**
- * Auth state: current logged-in user (username only).
- * User list and hashed passwords live in localStorage as JSON (see auth/usersStorage).
- * Persisted so refresh keeps you logged in.
+ * Auth state via Firebase Auth. Same account works from any device.
+ * currentUser is set by onAuthStateChanged (see main.tsx); no persist needed.
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { hashPassword, generateSalt, verifyPassword } from '../auth/hash';
-import { getUser, setUser, userExists } from '../auth/usersStorage';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  type User,
+} from 'firebase/auth';
+import { auth } from '../firebase/config';
 
-const AUTH_STORAGE_KEY = 'cto-simulator-auth';
-
-export interface AuthState {
-  currentUser: string | null;
-  login: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  signUp: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => void;
+export interface CurrentUser {
+  uid: string;
+  email: string | null;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      currentUser: null,
+export interface AuthState {
+  currentUser: CurrentUser | null;
+  setCurrentUser: (user: CurrentUser | null) => void;
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  logout: () => Promise<void>;
+}
 
-      async login(username: string, password: string) {
-        const normalized = username.trim().toLowerCase();
-        if (!normalized || !password) {
-          return { ok: false, error: 'Username and password required' };
-        }
-        const stored = getUser(normalized);
-        if (!stored) {
-          return { ok: false, error: 'User not found' };
-        }
-        const valid = await verifyPassword(password, stored.salt, stored.passwordHash);
-        if (!valid) {
-          return { ok: false, error: 'Invalid password' };
-        }
-        set({ currentUser: normalized });
-        return { ok: true };
-      },
+function userToCurrentUser(user: User): CurrentUser {
+  return { uid: user.uid, email: user.email ?? null };
+}
 
-      async signUp(username: string, password: string) {
-        const normalized = username.trim().toLowerCase();
-        if (!normalized || !password) {
-          return { ok: false, error: 'Username and password required' };
-        }
-        if (normalized.length < 2) {
-          return { ok: false, error: 'Username at least 2 characters' };
-        }
-        if (password.length < 4) {
-          return { ok: false, error: 'Password at least 4 characters' };
-        }
-        if (userExists(normalized)) {
-          return { ok: false, error: 'Username already taken' };
-        }
-        const salt = generateSalt();
-        const passwordHash = await hashPassword(password, salt);
-        setUser(normalized, { passwordHash, salt, createdAt: Date.now() });
-        set({ currentUser: normalized });
-        return { ok: true };
-      },
+export const useAuthStore = create<AuthState>()((set) => ({
+  currentUser: null,
 
-      logout() {
-        set({ currentUser: null });
-      },
-    }),
-    { name: AUTH_STORAGE_KEY }
-  )
-);
+  setCurrentUser(user: CurrentUser | null) {
+    set({ currentUser: user });
+  },
+
+  async login(email: string, password: string) {
+    const trimmed = email.trim();
+    if (!trimmed || !password) {
+      return { ok: false, error: 'Email and password required' };
+    }
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, trimmed, password);
+      set({ currentUser: userToCurrentUser(userCred.user) });
+      return { ok: true };
+    } catch (err: unknown) {
+      const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Login failed';
+      return { ok: false, error: message };
+    }
+  },
+
+  async signUp(email: string, password: string) {
+    const trimmed = email.trim();
+    if (!trimmed || !password) {
+      return { ok: false, error: 'Email and password required' };
+    }
+    if (password.length < 6) {
+      return { ok: false, error: 'Password must be at least 6 characters' };
+    }
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, trimmed, password);
+      set({ currentUser: userToCurrentUser(userCred.user) });
+      return { ok: true };
+    } catch (err: unknown) {
+      const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Sign up failed';
+      return { ok: false, error: message };
+    }
+  },
+
+  async logout() {
+    await signOut(auth);
+    set({ currentUser: null });
+  },
+}));

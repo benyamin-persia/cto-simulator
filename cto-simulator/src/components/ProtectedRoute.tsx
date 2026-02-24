@@ -9,7 +9,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const currentUser = useAuthStore((s) => s.currentUser);
   const location = useLocation();
 
-  if (currentUser == null || currentUser === '') {
+  if (currentUser == null) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

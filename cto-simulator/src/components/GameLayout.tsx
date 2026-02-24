@@ -61,12 +61,12 @@ export function GameLayout() {
           </button>
           <button
             type="button"
-            onClick={() => { logout(); navigate('/login', { replace: true }); }}
+            onClick={async () => { await logout(); navigate('/login', { replace: true }); }}
             className="rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)]"
             title="Sign out (progress is saved per user)"
             aria-label="Sign out"
           >
-            Logout {currentUser ? `(${currentUser})` : ''}
+            Logout {currentUser?.email ? `(${currentUser.email})` : ''}
           </button>
         </div>
       </header>

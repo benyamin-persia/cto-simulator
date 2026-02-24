@@ -1,0 +1,9 @@
+{
+  "name": "class",
+  "private": true,
+  "description": "Repo root for Vercel: install and build run in cto-simulator",
+  "scripts": {
+    "install": "cd cto-simulator && npm install",
+    "build": "cd cto-simulator && npm run build"
+  }
+}

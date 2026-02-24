@@ -1,7 +1,7 @@
 /**
  * Global game state using Zustand.
  * Persists to localStorage so progress survives refresh.
- * Actions: add XP, set level, update health, complete level, record decisions.
+ * When a user is logged in, state is stored per user (cto-simulator-game-${username}).
  */
 
 import { create } from 'zustand';
@@ -10,6 +10,36 @@ import type { LevelId, GameState, LevelConfig } from '../types/game';
 import { DEFAULT_LEVELS, INITIAL_HEALTH, MAX_HEALTH, MIN_HEALTH } from '../types/game';
 
 const STORAGE_KEY = 'cto-simulator-game';
+
+/** Get current user from auth localStorage so we can pick the right game key (no circular store dep). */
+function getGameStorageKey(): string {
+  try {
+    const raw = localStorage.getItem('cto-simulator-auth');
+    if (!raw) return STORAGE_KEY;
+    const parsed = JSON.parse(raw) as { state?: { currentUser?: string | null } };
+    const user = parsed?.state?.currentUser;
+    return user ? `${STORAGE_KEY}-${user}` : STORAGE_KEY;
+  } catch {
+    return STORAGE_KEY;
+  }
+}
+
+const gameStorage = {
+  getItem: (): unknown => {
+    try {
+      const s = localStorage.getItem(getGameStorageKey());
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  },
+  setItem: (_name: string, value: unknown): void => {
+    localStorage.setItem(getGameStorageKey(), JSON.stringify(value));
+  },
+  removeItem: (): void => {
+    localStorage.removeItem(getGameStorageKey());
+  },
+};
 
 function buildInitialLevels(): GameState['levels'] {
   const levels = {} as GameState['levels'];
@@ -46,6 +76,8 @@ export interface GameStore extends GameState {
   getLevelResetKey: (levelId: LevelId) => number;
   resetGame: () => void;
   getLevel: (id: LevelId) => LevelConfig;
+  /** Load saved game for a user (call after login). No-op if no saved state. */
+  loadGameForUser: (username: string) => void;
 }
 
 const initialState: GameState = {
@@ -156,7 +188,23 @@ export const useGameStore = create<GameStore>()(
       getLevel(id: LevelId) {
         return get().levels[id];
       },
+
+      loadGameForUser(username: string) {
+        try {
+          const key = `${STORAGE_KEY}-${username}`;
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };
+          const state = parsed?.state;
+          if (state && typeof state === 'object') {
+            set(state as Partial<GameStore>);
+          }
+        } catch {
+          // ignore invalid or missing data
+        }
+      },
     }),
-    { name: STORAGE_KEY }
+    // Storage key switches by current user (read from auth localStorage) so each user has separate progress
+    { name: STORAGE_KEY, storage: gameStorage as unknown as import('zustand/middleware').PersistStorage<GameStore> }
   )
 );

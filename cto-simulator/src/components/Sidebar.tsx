@@ -1,6 +1,6 @@
 /**
  * Sidebar: level navigation. Shows all 6 levels with mission brief; current level highlighted, locked levels disabled.
- * Mission brief = one-line summary of what you must pass for that level.
+ * Also shows XP and startup health % at top when expanded.
  */
 
 import { NavLink } from 'react-router-dom';
@@ -10,13 +10,22 @@ import { LEVEL_ORDER, LEVEL_MISSION_BRIEFS } from '../data/levels';
 import { textWithTooltips } from './TextWithTooltips';
 
 export function Sidebar() {
-  const { levels, currentLevelId, sidebarOpen, setSidebarOpen } = useGameStore();
+  const { levels, currentLevelId, sidebarOpen, setSidebarOpen, totalXp, startupHealth } = useGameStore();
   const expanded = sidebarOpen !== false;
 
   return (
     <aside
       className={`flex h-full flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)] ${expanded ? 'w-56' : 'w-14'}`}
     >
+      {/* XP and health % — shown when sidebar is expanded */}
+      {expanded && (
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-3 py-2">
+          <span className="text-xs font-medium text-[var(--text-muted)]">XP</span>
+          <span className="text-sm font-medium tabular-nums text-[var(--text-primary)]">{totalXp} pts</span>
+          <span className="text-xs font-medium text-[var(--text-muted)]">Health</span>
+          <span className="text-sm font-medium tabular-nums text-[var(--text-primary)]">{startupHealth}%</span>
+        </div>
+      )}
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] p-2">
         {expanded ? (
           <>

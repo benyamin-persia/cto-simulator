@@ -1,15 +1,17 @@
 /**
  * App: root component. Sets up React Router and game layout.
- * Routes: / (home), /level/:id (levels 1–6), /final (summary and restart).
- * GameLayout syncs currentLevelId from URL so sidebar and header stay correct.
+ * Routes: /login (auth), / (home), /level/:id (levels 1–6), /final (summary).
+ * Game routes require login; game state is persisted per user in localStorage.
  */
 
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { useGameStore } from './store/gameStore';
 import { GameLayout } from './components/GameLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { ResetKeyHandler } from './components/ResetKeyHandler';
 import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/LoginPage';
 import { FinalScreen } from './pages/FinalScreen';
 import { Level1ProjectPlanning } from './levels/Level1ProjectPlanning';
 import { Level2Architecture } from './levels/Level2Architecture';
@@ -57,11 +59,33 @@ export default function App() {
     <BrowserRouter>
       <ResetKeyHandler />
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="level/:id" element={<GameLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="level/:id"
+          element={
+            <ProtectedRoute>
+              <GameLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<LevelRoute />} />
         </Route>
-        <Route path="final" element={<GameLayout />}>
+        <Route
+          path="final"
+          element={
+            <ProtectedRoute>
+              <GameLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<FinalScreen />} />
         </Route>
       </Routes>

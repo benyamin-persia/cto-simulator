@@ -1,16 +1,19 @@
 /**
- * GameLayout: main shell for the game. Includes top bar (XP, level, health), sidebar, and outlet for level content.
+ * GameLayout: main shell for the game. Includes top bar (level title, Tooltips toggle), sidebar (XP + health %), and outlet for level content.
  * Smooth transitions between screens via Framer Motion on the outlet.
  */
 
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
-import { XPBar } from './XPBar';
+import { useAuthStore } from '../store/authStore';
 import { Sidebar } from './Sidebar';
 
 export function GameLayout() {
-  const { totalXp, currentLevelId, startupHealth, levels, tooltipsEnabled, setTooltipsEnabled, sidebarVisible, setSidebarVisible, sidebarOpen } = useGameStore();
+  const navigate = useNavigate();
+  const { currentLevelId, levels, tooltipsEnabled, setTooltipsEnabled, sidebarVisible, setSidebarVisible, sidebarOpen } = useGameStore();
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const logout = useAuthStore((s) => s.logout);
   const tooltipsOn = tooltipsEnabled !== false;
   const location = useLocation();
   const isFinal = location.pathname === '/final';
@@ -22,13 +25,12 @@ export function GameLayout() {
 
   return (
     <div className="flex h-screen flex-col bg-[var(--bg-primary)]">
-      {/* Top bar: XP, current level name, startup health */}
+      {/* Top bar: current level name only; XP and health % live in sidebar */}
       <header className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-6 py-3">
         <div className="flex items-center gap-6">
-          <XPBar xp={totalXp} />
           <div className="flex items-center gap-2">
             <span className="text-sm text-[var(--text-muted)]">Level</span>
-          <span className="font-semibold text-[var(--text-primary)]">
+          <span className="text-sm font-medium text-[var(--text-primary)]">
             {isFinal ? 'Summary' : (currentLevel?.title ?? currentLevelId)}
           </span>
           </div>
@@ -57,21 +59,15 @@ export function GameLayout() {
           >
             Tooltips {tooltipsOn ? 'On' : 'Off'}
           </button>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-[var(--text-muted)]">Startup health</span>
-          <div className="h-3 w-40 overflow-hidden rounded-full bg-[var(--bg-card)]">
-            <motion.div
-              className="h-full rounded-full bg-[var(--accent-neon)]"
-              initial={false}
-              animate={{ width: `${startupHealth}%` }}
-              transition={{ duration: 0.5 }}
-              style={{ width: `${startupHealth}%` }}
-            />
-          </div>
-          <span className="text-sm font-medium tabular-nums text-[var(--text-primary)]">
-            {startupHealth}%
-          </span>
+          <button
+            type="button"
+            onClick={() => { logout(); navigate('/login', { replace: true }); }}
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)]"
+            title="Sign out (progress is saved per user)"
+            aria-label="Sign out"
+          >
+            Logout {currentUser ? `(${currentUser})` : ''}
+          </button>
         </div>
       </header>
 

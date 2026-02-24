@@ -1,0 +1,130 @@
+/**
+ * Login / Sign up page. All auth is local (localStorage + JSON); no server or DB.
+ * After login/signup we load this user's game state and redirect to home.
+ */
+
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useAuthStore } from '../store/authStore';
+import { useGameStore } from '../store/gameStore';
+
+type Mode = 'login' | 'signup';
+
+export function LoginPage() {
+  const [mode, setMode] = useState<Mode>('login');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const login = useAuthStore((s) => s.login);
+  const signUp = useAuthStore((s) => s.signUp);
+  const loadGameForUser = useGameStore((s) => s.loadGameForUser);
+
+  useEffect(() => {
+    if (currentUser) navigate('/', { replace: true });
+  }, [currentUser, navigate]);
+
+  if (currentUser) return null;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const result = mode === 'login' ? await login(username, password) : await signUp(username, password);
+      if (result.ok) {
+        const user = username.trim().toLowerCase();
+        loadGameForUser(user);
+        navigate('/', { replace: true });
+      } else {
+        setError(result.error ?? 'Something went wrong');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg-primary)] p-6">
+      <motion.div
+        className="w-full max-w-sm rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <h1 className="mb-1 text-xl font-bold text-[var(--text-primary)]">CTO Simulator</h1>
+        <p className="mb-6 text-sm text-[var(--text-muted)]">
+          Sign in or create an account. Progress is saved per user on this device.
+        </p>
+
+        <div className="mb-4 flex gap-2 rounded-lg bg-[var(--bg-card)] p-1">
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setError(null); }}
+            className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
+              mode === 'login' ? 'bg-[var(--accent-neon)]/20 text-[var(--accent-neon)]' : 'text-[var(--text-muted)]'
+            }`}
+          >
+            Log in
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('signup'); setError(null); }}
+            className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
+              mode === 'signup' ? 'bg-[var(--accent-neon)]/20 text-[var(--accent-neon)]' : 'text-[var(--text-muted)]'
+            }`}
+          >
+            Sign up
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label htmlFor="username" className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[var(--text-primary)] focus:border-[var(--accent-neon)] focus:outline-none"
+              placeholder="e.g. alice"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[var(--text-primary)] focus:border-[var(--accent-neon)] focus:outline-none"
+              placeholder="••••••••"
+            />
+          </div>
+          {error && (
+            <p className="text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-[var(--accent-neon)] px-4 py-2.5 font-semibold text-[var(--bg-primary)] hover:opacity-90 disabled:opacity-50"
+          >
+            {loading ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Sign up'}
+          </button>
+        </form>
+      </motion.div>
+    </div>
+  );
+}

@@ -1,0 +1,29 @@
+/* Global styles: Tailwind base + custom dark theme variables for CTO Simulator */
+@import "tailwindcss";
+
+:root {
+  /* Futuristic dark theme with neon accents */
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-card: #1a2234;
+  --border-subtle: #2d3748;
+  --text-primary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent-neon: #00f5d4;
+  --accent-neon-dim: #00b4a0;
+  --accent-warning: #fbbf24;
+  --accent-danger: #f87171;
+  --accent-success: #34d399;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}

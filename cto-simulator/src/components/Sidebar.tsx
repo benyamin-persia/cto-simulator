@@ -9,7 +9,11 @@ import { useGameStore } from '../store/gameStore';
 import { LEVEL_ORDER, LEVEL_MISSION_BRIEFS } from '../data/levels';
 import { textWithTooltips } from './TextWithTooltips';
 
-export function Sidebar() {
+type SidebarProps = {
+  onNavigate?: () => void;
+};
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const { levels, currentLevelId } = useGameStore();
 
   return (
@@ -30,6 +34,7 @@ export function Sidebar() {
             <NavLink
               key={id}
               to={`/level/${id}`}
+              onClick={onNavigate}
               title={missionBrief}
               className={({ isActive }) =>
                 `flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm no-underline transition-colors ${
@@ -64,6 +69,7 @@ export function Sidebar() {
         })}
         <NavLink
           to="/final"
+          onClick={onNavigate}
           className={({ isActive }) =>
             `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm no-underline transition-colors ${
               isActive ? 'bg-[var(--accent-neon)]/15 text-[var(--accent-neon)]' : 'text-[var(--text-primary)] hover:bg-[var(--bg-card)]'

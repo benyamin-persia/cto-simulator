@@ -5,7 +5,7 @@
 
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { XPBar } from './XPBar';
 import { Sidebar } from './Sidebar';
@@ -17,11 +17,6 @@ export function GameLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isFinal = location.pathname === '/final';
   const currentLevel = levels[currentLevelId];
-
-  useEffect(() => {
-    // Keep focus on content: hide the sidebar again when the route changes.
-    setIsSidebarOpen(false);
-  }, [location.pathname]);
 
   return (
     <div className="flex h-screen flex-col bg-[var(--bg-primary)]">
@@ -73,7 +68,7 @@ export function GameLayout() {
           onMouseEnter={() => setIsSidebarOpen(true)}
           onMouseLeave={() => setIsSidebarOpen(false)}
         >
-          <Sidebar />
+          <Sidebar onNavigate={() => setIsSidebarOpen(false)} />
           <button
             type="button"
             onClick={() => setIsSidebarOpen((value) => !value)}

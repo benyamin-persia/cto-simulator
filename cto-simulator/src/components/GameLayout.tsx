@@ -10,8 +10,9 @@ import { XPBar } from './XPBar';
 import { Sidebar } from './Sidebar';
 
 export function GameLayout() {
-  const { totalXp, currentLevelId, startupHealth, levels, tooltipsEnabled, setTooltipsEnabled } = useGameStore();
+  const { totalXp, currentLevelId, startupHealth, levels, tooltipsEnabled, setTooltipsEnabled, sidebarOpen, setSidebarOpen } = useGameStore();
   const tooltipsOn = tooltipsEnabled !== false;
+  const sidebarVisible = sidebarOpen !== false;
   const location = useLocation();
   const isFinal = location.pathname === '/final';
   const currentLevel = levels[currentLevelId];
@@ -32,11 +33,24 @@ export function GameLayout() {
         <div className="flex items-center gap-4">
           <button
             type="button"
+            onClick={() => setSidebarOpen(!sidebarVisible)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              sidebarVisible ? 'bg-[var(--accent-neon)]/20 text-[var(--accent-neon)]' : 'bg-[var(--bg-card)] text-[var(--text-muted)]'
+            }`}
+            title={sidebarVisible ? 'Hide levels panel' : 'Show levels panel'}
+            aria-expanded={sidebarVisible}
+            aria-label={sidebarVisible ? 'Hide levels panel' : 'Show levels panel'}
+          >
+            {sidebarVisible ? 'Hide levels' : 'Show levels'}
+          </button>
+          <button
+            type="button"
             onClick={() => setTooltipsEnabled(!tooltipsOn)}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               tooltipsOn ? 'bg-[var(--accent-neon)]/20 text-[var(--accent-neon)]' : 'bg-[var(--bg-card)] text-[var(--text-muted)]'
             }`}
             title="Toggle keyword tooltips (click highlighted terms to show definitions)"
+            aria-label={tooltipsOn ? 'Turn tooltips off' : 'Turn tooltips on'}
           >
             Tooltips {tooltipsOn ? 'On' : 'Off'}
           </button>
@@ -59,7 +73,15 @@ export function GameLayout() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        <motion.div
+          className="flex shrink-0 overflow-hidden"
+          initial={false}
+          animate={{ width: sidebarVisible ? 224 : 56 }}
+          transition={{ type: 'tween', duration: 0.2 }}
+          aria-hidden={!sidebarVisible}
+        >
+          <Sidebar />
+        </motion.div>
         <main className="flex-1 overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div

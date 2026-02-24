@@ -29,6 +29,9 @@ export interface GameStore extends GameState {
   /** When true, clicking glossary keywords shows their definition in a tooltip; persisted with game state. Defaults to true if missing. */
   tooltipsEnabled?: boolean;
   setTooltipsEnabled: (enabled: boolean) => void;
+  /** When true, the LEVELS sidebar is visible; user can toggle via header button or collapse icon. Persisted. */
+  sidebarOpen?: boolean;
+  setSidebarOpen: (open: boolean) => void;
   addXp: (amount: number) => void;
   setCurrentLevel: (id: LevelId) => void;
   setStartupHealth: (delta: number) => void;
@@ -56,9 +59,14 @@ export const useGameStore = create<GameStore>()(
     (set, get) => ({
       ...initialState,
       tooltipsEnabled: true,
+      sidebarOpen: true,
 
       setTooltipsEnabled(enabled: boolean) {
         set({ tooltipsEnabled: enabled });
+      },
+
+      setSidebarOpen(open: boolean) {
+        set({ sidebarOpen: open });
       },
 
       addXp(amount: number) {
@@ -124,12 +132,14 @@ export const useGameStore = create<GameStore>()(
 
       resetGame() {
         const tooltipsEnabled = get().tooltipsEnabled;
+        const sidebarOpen = get().sidebarOpen;
         set({
           ...initialState,
           levels: buildInitialLevels(),
           decisionsByLevel: {} as GameState['decisionsByLevel'],
           levelResetKey: {},
           tooltipsEnabled,
+          sidebarOpen,
         });
       },
 

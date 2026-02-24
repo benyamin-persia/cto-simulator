@@ -10,12 +10,15 @@ import { XPBar } from './XPBar';
 import { Sidebar } from './Sidebar';
 
 export function GameLayout() {
-  const { totalXp, currentLevelId, startupHealth, levels, tooltipsEnabled, setTooltipsEnabled, sidebarOpen, setSidebarOpen } = useGameStore();
+  const { totalXp, currentLevelId, startupHealth, levels, tooltipsEnabled, setTooltipsEnabled, sidebarVisible, setSidebarVisible, sidebarOpen } = useGameStore();
   const tooltipsOn = tooltipsEnabled !== false;
-  const sidebarVisible = sidebarOpen !== false;
   const location = useLocation();
   const isFinal = location.pathname === '/final';
   const currentLevel = levels[currentLevelId];
+
+  const sidebarShown = sidebarVisible !== false;
+  // Sidebar: completely hidden (0) when !sidebarVisible; when visible, expanded (224) or collapsed to numbers (56)
+  const sidebarWidth = !sidebarShown ? 0 : (sidebarOpen !== false ? 224 : 56);
 
   return (
     <div className="flex h-screen flex-col bg-[var(--bg-primary)]">
@@ -33,15 +36,15 @@ export function GameLayout() {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => setSidebarOpen(!sidebarVisible)}
+            onClick={() => setSidebarVisible(!sidebarShown)}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              sidebarVisible ? 'bg-[var(--accent-neon)]/20 text-[var(--accent-neon)]' : 'bg-[var(--bg-card)] text-[var(--text-muted)]'
+              sidebarShown ? 'bg-[var(--accent-neon)]/20 text-[var(--accent-neon)]' : 'bg-[var(--bg-card)] text-[var(--text-muted)]'
             }`}
-            title={sidebarVisible ? 'Hide levels panel' : 'Show levels panel'}
-            aria-expanded={sidebarVisible}
-            aria-label={sidebarVisible ? 'Hide levels panel' : 'Show levels panel'}
+            title={sidebarShown ? 'Hide levels panel completely' : 'Show levels panel'}
+            aria-expanded={sidebarShown}
+            aria-label={sidebarShown ? 'Hide levels panel' : 'Show levels panel'}
           >
-            {sidebarVisible ? 'Hide levels' : 'Show levels'}
+            {sidebarShown ? 'Hide levels' : 'Show levels'}
           </button>
           <button
             type="button"
@@ -76,9 +79,9 @@ export function GameLayout() {
         <motion.div
           className="flex shrink-0 overflow-hidden"
           initial={false}
-          animate={{ width: sidebarVisible ? 224 : 56 }}
+          animate={{ width: sidebarWidth }}
           transition={{ type: 'tween', duration: 0.2 }}
-          aria-hidden={!sidebarVisible}
+          aria-hidden={!sidebarShown}
         >
           <Sidebar />
         </motion.div>

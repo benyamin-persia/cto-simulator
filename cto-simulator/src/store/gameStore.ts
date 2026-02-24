@@ -32,6 +32,9 @@ export interface GameStore extends GameState {
   /** When true, the LEVELS sidebar is visible; user can toggle via header button or collapse icon. Persisted. */
   sidebarOpen?: boolean;
   setSidebarOpen: (open: boolean) => void;
+  /** When false, sidebar is completely hidden (width 0); header shows "Show levels". When true, sidebar is shown (expanded or collapsed to numbers). Persisted. */
+  sidebarVisible?: boolean;
+  setSidebarVisible: (visible: boolean) => void;
   addXp: (amount: number) => void;
   setCurrentLevel: (id: LevelId) => void;
   setStartupHealth: (delta: number) => void;
@@ -60,6 +63,7 @@ export const useGameStore = create<GameStore>()(
       ...initialState,
       tooltipsEnabled: true,
       sidebarOpen: true,
+      sidebarVisible: true,
 
       setTooltipsEnabled(enabled: boolean) {
         set({ tooltipsEnabled: enabled });
@@ -67,6 +71,10 @@ export const useGameStore = create<GameStore>()(
 
       setSidebarOpen(open: boolean) {
         set({ sidebarOpen: open });
+      },
+
+      setSidebarVisible(visible: boolean) {
+        set({ sidebarVisible: visible });
       },
 
       addXp(amount: number) {
@@ -133,6 +141,7 @@ export const useGameStore = create<GameStore>()(
       resetGame() {
         const tooltipsEnabled = get().tooltipsEnabled;
         const sidebarOpen = get().sidebarOpen;
+        const sidebarVisible = get().sidebarVisible;
         set({
           ...initialState,
           levels: buildInitialLevels(),
@@ -140,6 +149,7 @@ export const useGameStore = create<GameStore>()(
           levelResetKey: {},
           tooltipsEnabled,
           sidebarOpen,
+          sidebarVisible,
         });
       },
 

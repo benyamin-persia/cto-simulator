@@ -5,6 +5,7 @@
 
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { XPBar } from './XPBar';
 import { Sidebar } from './Sidebar';
@@ -13,8 +14,14 @@ export function GameLayout() {
   const { totalXp, currentLevelId, startupHealth, levels, tooltipsEnabled, setTooltipsEnabled } = useGameStore();
   const tooltipsOn = tooltipsEnabled !== false;
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isFinal = location.pathname === '/final';
   const currentLevel = levels[currentLevelId];
+
+  useEffect(() => {
+    // Keep focus on content: hide the sidebar again when the route changes.
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen flex-col bg-[var(--bg-primary)]">
@@ -58,9 +65,35 @@ export function GameLayout() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
+        <div
+          className={`absolute inset-y-0 left-0 z-30 flex transition-transform duration-300 ease-out ${
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-[14rem]'
+          }`}
+          onMouseEnter={() => setIsSidebarOpen(true)}
+          onMouseLeave={() => setIsSidebarOpen(false)}
+        >
+          <Sidebar />
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen((value) => !value)}
+            className="mt-4 h-16 w-8 shrink-0 rounded-r-lg border border-l-0 border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-muted)] transition-colors hover:text-[var(--accent-neon)]"
+            aria-label={isSidebarOpen ? 'Hide levels menu' : 'Show levels menu'}
+            aria-expanded={isSidebarOpen}
+            title={isSidebarOpen ? 'Hide levels menu' : 'Show levels menu'}
+          >
+            {isSidebarOpen ? '‹' : '›'}
+          </button>
+        </div>
+
+        <main
+          className="flex-1 overflow-hidden pl-8"
+          onPointerDown={() => {
+            if (isSidebarOpen) {
+              setIsSidebarOpen(false);
+            }
+          }}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

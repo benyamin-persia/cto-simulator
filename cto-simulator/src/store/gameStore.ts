@@ -206,8 +206,11 @@ export const useGameStore = create<GameStore>()(
           const key = `${STORAGE_KEY}-${uid}`;
           const raw = localStorage.getItem(key);
           if (!raw) return;
-          const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };
-          const state = parsed?.state;
+          const parsed = JSON.parse(raw) as { state?: Record<string, unknown> } | Record<string, unknown>;
+          // Zustand persist stores { state, version }; accept that or raw state object
+          const state = (parsed && typeof parsed === 'object' && 'state' in parsed)
+            ? (parsed as { state?: Record<string, unknown> }).state
+            : (parsed as Record<string, unknown>);
           if (state && typeof state === 'object') {
             set({ ...(state as Partial<GameStore>), loadedFromRemote: true });
           }

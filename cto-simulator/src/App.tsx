@@ -40,7 +40,7 @@ function pickSnapshot(state: Record<string, unknown>): GameStateSnapshot {
   };
 }
 
-/** Sync Firebase auth state and load game from Firestore when user logs in. */
+/** Sync Firebase auth state and load game when user logs in. Load from localStorage first so progress shows immediately; then try Firestore and overwrite if we get cloud data. */
 function useAuthSync() {
   useEffect(() => {
     if (!auth) return;
@@ -49,9 +49,13 @@ function useAuthSync() {
       const loadGameForUser = useGameStore.getState().loadGameForUser;
       if (user) {
         setCurrentUser({ uid: user.uid, email: user.email ?? null });
-        // Use timeout so when Firestore is blocked (e.g. ad blocker) we fall back to localStorage and keep progress
+        // Load from localStorage immediately so user sees their progress right away (no wait for Firestore)
+        loadGameForUser(user.uid, undefined);
+        // Then try Firestore; if we get data, overwrite for cross-device sync
         const remoteState = await loadGameStateWithTimeout(user.uid);
-        loadGameForUser(user.uid, (remoteState ?? undefined) as Record<string, unknown> | undefined);
+        if (remoteState != null && typeof remoteState === 'object') {
+          loadGameForUser(user.uid, remoteState as Record<string, unknown>);
+        }
       } else {
         setCurrentUser(null);
       }

@@ -28,27 +28,20 @@ npm run preview
 - **Framer Motion** for animations
 - **Zustand** for game state (with localStorage persistence per user)
 - **Firebase Auth** for sign-in (same account works from any device)
+- **Firestore** for syncing game progress (XP, levels) across devices
 - **@dnd-kit** for drag-and-drop (Level 1 WBS)
 
-Progress is stored in `localStorage` per user (keyed by Firebase UID). No backend besides Firebase for auth.
+Progress is stored in **Firestore** when you're logged in (same on every device) and in localStorage as cache.
 
-## Firebase setup (required for login)
+## Firebase setup (required for login and progress sync)
 
-1. Create a project at [Firebase Console](https://console.firebase.google.com).
-2. Enable **Authentication** → **Sign-in method** → **Email/Password**.
-3. In Project settings → Your apps, add a web app and copy the config.
-4. Copy `.env.example` to `.env` and set:
+1. **Enable Email/Password:** Run `npm run firebase:open-auth` (opens Firebase Console). Click **Email/Password** → **Enable** → **Save**.
+2. **Create Firestore database:** Firebase Console → **Build** → **Firestore Database** → **Create database** → choose a location → **Start in test mode** (or production with rules below). This lets the app save/load your progress across devices.
+3. **Optional – secure Firestore rules:** In Firestore → **Rules**, use: `allow read, write: if request.auth != null && request.path[1] == request.auth.uid;` so users can only read/write their own `users/{uid}` document.
+4. **Local:** `.env` with `VITE_FIREBASE_*` is already set (see `.env.example`). Restart dev server after editing.
+5. **Vercel (production):** Run `npm run vercel:env` and paste each printed line into Vercel → Project → Settings → Environment Variables. Then redeploy.
 
-   ```
-   VITE_FIREBASE_API_KEY=...
-   VITE_FIREBASE_AUTH_DOMAIN=...
-   VITE_FIREBASE_PROJECT_ID=...
-   VITE_FIREBASE_STORAGE_BUCKET=...
-   VITE_FIREBASE_MESSAGING_SENDER_ID=...
-   VITE_FIREBASE_APP_ID=...
-   ```
-
-5. Restart the dev server. Sign up and log in with email/password; the same account works on any device.
+Sign up and log in with email/password; your progress (XP, levels) syncs to any device.
 
 ## Project structure
 
@@ -82,3 +75,10 @@ Complete Level 1 to unlock Level 2; progress is saved. The **Summary** screen sh
 ## Documentation for agents
 
 See **[AGENTS.md](./AGENTS.md)** for detailed documentation aimed at AI agents and developers: full source structure, data flow, how to add levels/briefings/glossary terms, and conventions.
+
+## For learners: English → Persian dictionary
+
+A comprehensive **English → Persian** dictionary of hard and medium-hard terms and phrases from the codebase is available for study or translation:
+
+- **Markdown (readable):** [docs/EN_FA_DICTIONARY.md](./docs/EN_FA_DICTIONARY.md) — tables of terms, acronyms, phrases, and UI labels with Persian equivalents.
+- **TypeScript (programmatic):** `src/data/enFaDictionary.ts` — exports `EN_FA_HARD`, `EN_FA_MEDIUM_HARD`, `EN_FA_PHRASES`, `EN_FA_UI_LABELS`, `EN_FA_DICTIONARY`, and `translateToPersian(english)` for use in the app (e.g. i18n or Persian tooltips).

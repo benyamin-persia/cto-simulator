@@ -11,9 +11,9 @@ import { auth } from '../firebase/config';
 
 const STORAGE_KEY = 'cto-simulator-game';
 
-/** Use Firebase auth.currentUser?.uid so the same key is used on every device for this user. */
+/** Use Firebase auth.currentUser?.uid when configured; otherwise default key. */
 function getGameStorageKey(): string {
-  const user = auth.currentUser;
+  const user = auth?.currentUser;
   return user ? `${STORAGE_KEY}-${user.uid}` : STORAGE_KEY;
 }
 
@@ -69,8 +69,8 @@ export interface GameStore extends GameState {
   getLevelResetKey: (levelId: LevelId) => number;
   resetGame: () => void;
   getLevel: (id: LevelId) => LevelConfig;
-  /** Load saved game for this user (call when Firebase auth state becomes a user). No-op if no saved state. */
-  loadGameForUser: (uid: string) => void;
+  /** Load saved game for this user. If remoteState is provided (from Firestore), use it; else load from localStorage. */
+  loadGameForUser: (uid: string, remoteState?: Record<string, unknown>) => void;
 }
 
 const initialState: GameState = {
@@ -182,7 +182,11 @@ export const useGameStore = create<GameStore>()(
         return get().levels[id];
       },
 
-      loadGameForUser(uid: string) {
+      loadGameForUser(uid: string, remoteState?: Record<string, unknown>) {
+        if (remoteState != null && typeof remoteState === 'object') {
+          set(remoteState as Partial<GameStore>);
+          return;
+        }
         try {
           const key = `${STORAGE_KEY}-${uid}`;
           const raw = localStorage.getItem(key);

@@ -10,7 +10,7 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { auth, isFirebaseConfigured } from '../firebase/config';
 
 export interface CurrentUser {
   uid: string;
@@ -37,12 +37,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   async login(email: string, password: string) {
+    if (!isFirebaseConfigured()) {
+      return { ok: false, error: 'Firebase is not configured. Add VITE_FIREBASE_* to .env (see .env.example).' };
+    }
     const trimmed = email.trim();
     if (!trimmed || !password) {
       return { ok: false, error: 'Email and password required' };
     }
     try {
-      const userCred = await signInWithEmailAndPassword(auth, trimmed, password);
+      const userCred = await signInWithEmailAndPassword(auth!, trimmed, password);
       set({ currentUser: userToCurrentUser(userCred.user) });
       return { ok: true };
     } catch (err: unknown) {
@@ -52,6 +55,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   async signUp(email: string, password: string) {
+    if (!isFirebaseConfigured()) {
+      return { ok: false, error: 'Firebase is not configured. Add VITE_FIREBASE_* to .env (see .env.example).' };
+    }
     const trimmed = email.trim();
     if (!trimmed || !password) {
       return { ok: false, error: 'Email and password required' };
@@ -60,7 +66,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return { ok: false, error: 'Password must be at least 6 characters' };
     }
     try {
-      const userCred = await createUserWithEmailAndPassword(auth, trimmed, password);
+      const userCred = await createUserWithEmailAndPassword(auth!, trimmed, password);
       set({ currentUser: userToCurrentUser(userCred.user) });
       return { ok: true };
     } catch (err: unknown) {
@@ -70,7 +76,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   async logout() {
-    await signOut(auth);
+    if (auth) await signOut(auth);
     set({ currentUser: null });
   },
 }));

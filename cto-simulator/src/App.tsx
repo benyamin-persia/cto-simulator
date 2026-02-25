@@ -1,13 +1,13 @@
 /**
  * App: root component. Sets up React Router and game layout.
- * Routes: /login (auth), / (home), /level/:id (levels 1–6), /final (summary).
- * Firebase Auth: same account works from any device; onAuthStateChanged syncs user and loads game.
+ * Firebase Auth + Firestore: same account and progress on every device.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase/config';
+import { loadGameState, saveGameState, type GameStateSnapshot } from './firebase/gameSync';
 import { useAuthStore } from './store/authStore';
 import { useGameStore } from './store/gameStore';
 import { GameLayout } from './components/GameLayout';
@@ -24,20 +24,59 @@ import { Level5CICD } from './levels/Level5CICD';
 import { Level6Documentation } from './levels/Level6Documentation';
 import type { LevelId } from './types/game';
 
-/** Sync Firebase auth state to store and load this user's game when they're logged in. */
+const SAVE_DEBOUNCE_MS = 1500;
+
+function pickSnapshot(state: Record<string, unknown>): GameStateSnapshot {
+  return {
+    totalXp: state.totalXp as number,
+    currentLevelId: state.currentLevelId as number,
+    startupHealth: state.startupHealth as number,
+    levels: state.levels as GameStateSnapshot['levels'],
+    decisionsByLevel: state.decisionsByLevel as GameStateSnapshot['decisionsByLevel'],
+    levelResetKey: state.levelResetKey as GameStateSnapshot['levelResetKey'],
+    tooltipsEnabled: state.tooltipsEnabled as boolean,
+    sidebarOpen: state.sidebarOpen as boolean,
+    sidebarVisible: state.sidebarVisible as boolean,
+  };
+}
+
+/** Sync Firebase auth state and load game from Firestore when user logs in. */
 function useAuthSync() {
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    if (!auth) return;
+    const unsub = onAuthStateChanged(auth, async (user) => {
       const setCurrentUser = useAuthStore.getState().setCurrentUser;
       const loadGameForUser = useGameStore.getState().loadGameForUser;
       if (user) {
         setCurrentUser({ uid: user.uid, email: user.email ?? null });
-        loadGameForUser(user.uid);
+        const remoteState = await loadGameState(user.uid);
+        loadGameForUser(user.uid, (remoteState ?? undefined) as Record<string, unknown> | undefined);
       } else {
         setCurrentUser(null);
       }
     });
     return () => unsub();
+  }, []);
+}
+
+/** When user is logged in, save game state to Firestore (debounced) so progress syncs across devices. */
+function useGameSync() {
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const unsub = useGameStore.subscribe((state) => {
+      const uid = useAuthStore.getState().currentUser?.uid;
+      if (!uid) return;
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        saveTimeoutRef.current = null;
+        saveGameState(uid, pickSnapshot(state as unknown as Record<string, unknown>));
+      }, SAVE_DEBOUNCE_MS);
+    });
+    return () => {
+      unsub();
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
   }, []);
 }
 
@@ -76,6 +115,7 @@ function LevelRoute() {
 
 export default function App() {
   useAuthSync();
+  useGameSync();
 
   return (
     <BrowserRouter>

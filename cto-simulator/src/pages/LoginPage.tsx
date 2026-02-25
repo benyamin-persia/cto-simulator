@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
-import { auth } from '../firebase/config';
+import { auth, isFirebaseConfigured } from '../firebase/config';
 
 type Mode = 'login' | 'signup';
 
@@ -31,13 +31,15 @@ export function LoginPage() {
 
   if (currentUser) return null;
 
+  const configured = isFirebaseConfigured();
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
       const result = mode === 'login' ? await login(email, password) : await signUp(email, password);
-      if (result.ok && auth.currentUser) {
+      if (result.ok && auth?.currentUser) {
         loadGameForUser(auth.currentUser.uid);
         navigate('/', { replace: true });
       } else if (!result.ok) {
@@ -58,8 +60,15 @@ export function LoginPage() {
       >
         <h1 className="mb-1 text-xl font-bold text-[var(--text-primary)]">CTO Simulator</h1>
         <p className="mb-6 text-sm text-[var(--text-muted)]">
-          Sign in or create an account. Use the same email on any device to continue your progress.
+          {configured
+            ? 'Sign in or create an account. Use the same email on any device to continue your progress.'
+            : 'Firebase is not configured. Add VITE_FIREBASE_* to .env (see .env.example) to enable login from any device.'}
         </p>
+        {!configured && (
+          <p className="mb-4 text-sm text-[var(--accent-neon)]">
+            You can still use the app: go back and open the home page (login is skipped when Firebase is missing).
+          </p>
+        )}
 
         <div className="mb-4 flex gap-2 rounded-lg bg-[var(--bg-card)] p-1">
           <button
@@ -118,11 +127,20 @@ export function LoginPage() {
           )}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !configured}
             className="rounded-lg bg-[var(--accent-neon)] px-4 py-2.5 font-semibold text-[var(--bg-primary)] hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Sign up'}
+            {loading ? 'Please wait…' : !configured ? 'Configure Firebase first' : mode === 'login' ? 'Log in' : 'Sign up'}
           </button>
+          {!configured && (
+            <button
+              type="button"
+              onClick={() => navigate('/', { replace: true })}
+              className="rounded-lg border border-[var(--border-subtle)] px-4 py-2.5 font-medium text-[var(--text-primary)] hover:bg-[var(--bg-card)]"
+            >
+              Use app without account
+            </button>
+          )}
         </form>
       </motion.div>
     </div>

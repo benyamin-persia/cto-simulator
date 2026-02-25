@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route, useParams, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase/config';
 import { loadGameState, saveGameState, type GameStateSnapshot } from './firebase/gameSync';
@@ -80,6 +80,31 @@ function useGameSync() {
   }, []);
 }
 
+/** After loading game from Firestore, redirect from home to the level they were on so they continue where they left off. */
+function RedirectToLevelAfterLoad() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const loadedFromRemote = useGameStore((s) => s.loadedFromRemote);
+  const currentLevelId = useGameStore((s) => s.currentLevelId);
+  const clearLoadedFromRemote = useGameStore.getState().clearLoadedFromRemote;
+
+  useEffect(() => {
+    if (
+      currentUser &&
+      loadedFromRemote &&
+      location.pathname === '/' &&
+      currentLevelId >= 1 &&
+      currentLevelId <= 6
+    ) {
+      clearLoadedFromRemote();
+      navigate(`/level/${currentLevelId}`, { replace: true });
+    }
+  }, [currentUser, loadedFromRemote, location.pathname, currentLevelId, navigate, clearLoadedFromRemote]);
+
+  return null;
+}
+
 function LevelRoute() {
   const { id } = useParams<{ id: string }>();
   const setCurrentLevel = useGameStore((s) => s.setCurrentLevel);
@@ -119,6 +144,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <RedirectToLevelAfterLoad />
       <ResetKeyHandler />
       <Routes>
         <Route path="/login" element={<LoginPage />} />

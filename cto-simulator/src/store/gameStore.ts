@@ -49,6 +49,9 @@ function buildInitialLevels(): GameState['levels'] {
 }
 
 export interface GameStore extends GameState {
+  /** Set by loadGameForUser when state was loaded from Firestore; used to redirect to current level once. Not persisted. */
+  loadedFromRemote?: boolean;
+  clearLoadedFromRemote: () => void;
   /** When true, clicking glossary keywords shows their definition in a tooltip; persisted with game state. Defaults to true if missing. */
   tooltipsEnabled?: boolean;
   setTooltipsEnabled: (enabled: boolean) => void;
@@ -86,9 +89,14 @@ export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       ...initialState,
+      loadedFromRemote: false,
       tooltipsEnabled: true,
       sidebarOpen: true,
       sidebarVisible: true,
+
+      clearLoadedFromRemote() {
+        set({ loadedFromRemote: false });
+      },
 
       setTooltipsEnabled(enabled: boolean) {
         set({ tooltipsEnabled: enabled });
@@ -184,7 +192,7 @@ export const useGameStore = create<GameStore>()(
 
       loadGameForUser(uid: string, remoteState?: Record<string, unknown>) {
         if (remoteState != null && typeof remoteState === 'object') {
-          set(remoteState as Partial<GameStore>);
+          set({ ...(remoteState as Partial<GameStore>), loadedFromRemote: true });
           return;
         }
         try {
@@ -201,7 +209,14 @@ export const useGameStore = create<GameStore>()(
         }
       },
     }),
-    // Storage key switches by current user (read from auth localStorage) so each user has separate progress
-    { name: STORAGE_KEY, storage: gameStorage as unknown as import('zustand/middleware').PersistStorage<GameStore> }
+    // Persist only game data; exclude loadedFromRemote so it is not saved to localStorage or rehydrated
+    {
+      name: STORAGE_KEY,
+      storage: gameStorage as unknown as import('zustand/middleware').PersistStorage<GameStore>,
+      partialize: (s) => {
+        const { loadedFromRemote: _, ...rest } = s;
+        return rest;
+      },
+    }
   )
 );

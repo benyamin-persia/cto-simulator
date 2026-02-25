@@ -91,6 +91,9 @@ function SortableWBSItem({ id, text }: { id: string; text: string }) {
 export function Level1ProjectPlanning() {
   const navigate = useNavigate();
   const { addXp, completeLevel, recordDecisions, setStartupHealth } = useGameStore();
+  const decisionsByLevel = useGameStore((s) => s.decisionsByLevel);
+  const level1Completed = useGameStore((s) => s.levels[1]?.completed);
+  const hasRestoredRef = useRef(false);
 
   const [showBriefing, setShowBriefing] = useState(true);
   const [step, setStep] = useState<Step>('startupType');
@@ -116,6 +119,53 @@ export function Level1ProjectPlanning() {
   const [riskReviewId, setRiskReviewId] = useState<string | null>(null);
   const [userStoryId, setUserStoryId] = useState<string | null>(null);
   const feedbackBlockRef = useRef<HTMLDivElement>(null);
+
+  // Restore mid-level progress from Firestore/localStorage so switching devices continues where they left off
+  useEffect(() => {
+    if (hasRestoredRef.current || level1Completed) {
+      hasRestoredRef.current = true;
+      return;
+    }
+    const saved = decisionsByLevel[1];
+    const stepVal = saved && typeof saved === 'object' ? (saved.step as Step | undefined) : undefined;
+    // No saved data yet (e.g. Firestore still loading): do not set hasRestoredRef so we run again when data arrives
+    if (!saved || typeof saved !== 'object') return;
+    if (!stepVal || stepVal === 'done') {
+      hasRestoredRef.current = true;
+      return;
+    }
+    hasRestoredRef.current = true;
+    setStep(stepVal);
+    if (saved.startupType != null) setStartupType(String(saved.startupType));
+    if (saved.smartGoalId != null) setSmartGoalId(String(saved.smartGoalId));
+    if (Array.isArray(saved.stakeholders)) setStakeholders(new Set(saved.stakeholders as string[]));
+    if (saved.riskReviewId != null) setRiskReviewId(String(saved.riskReviewId));
+    if (saved.userStoryId != null) setUserStoryId(String(saved.userStoryId));
+    if (Array.isArray(saved.wbsOrder) && saved.wbsOrder.length > 0) setWbsOrder(saved.wbsOrder as string[]);
+    setShowBriefing(false);
+  }, [decisionsByLevel, level1Completed]);
+
+  // If Firestore never had level 1 progress (new user or fresh level), allow persist after a short delay
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!hasRestoredRef.current) hasRestoredRef.current = true;
+    }, 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Persist current step and choices so progress syncs across devices (debounced by store + Firestore)
+  useEffect(() => {
+    if (!hasRestoredRef.current) return;
+    recordDecisions(1, {
+      step,
+      startupType: startupType ?? undefined,
+      smartGoalId: smartGoalId ?? undefined,
+      stakeholders: [...stakeholders],
+      riskReviewId: riskReviewId ?? undefined,
+      userStoryId: userStoryId ?? undefined,
+      wbsOrder,
+    });
+  }, [step, startupType, smartGoalId, stakeholders, riskReviewId, userStoryId, wbsOrder, recordDecisions]);
 
   // When entering each step, shuffle options so the correct answer isn’t always first
   useEffect(() => {

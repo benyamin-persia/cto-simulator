@@ -80,27 +80,25 @@ function useGameSync() {
   }, []);
 }
 
-/** After loading game from Firestore, redirect from home to the level they were on so they continue where they left off. */
+/** After loading game from Firestore (or when at home with progress), redirect to the level they were on so they continue where they left off. */
 function RedirectToLevelAfterLoad() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.currentUser);
   const loadedFromRemote = useGameStore((s) => s.loadedFromRemote);
   const currentLevelId = useGameStore((s) => s.currentLevelId);
+  const totalXp = useGameStore((s) => s.totalXp);
   const clearLoadedFromRemote = useGameStore.getState().clearLoadedFromRemote;
 
   useEffect(() => {
-    if (
-      currentUser &&
-      loadedFromRemote &&
-      location.pathname === '/' &&
-      currentLevelId >= 1 &&
-      currentLevelId <= 6
-    ) {
+    if (!currentUser || location.pathname !== '/' || currentLevelId < 1 || currentLevelId > 6) return;
+    // Redirect when we just loaded from Firestore, or when we have progress (so refresh on home still sends them to current level)
+    const hasProgress = currentLevelId > 1 || totalXp > 0;
+    if (loadedFromRemote || hasProgress) {
       clearLoadedFromRemote();
       navigate(`/level/${currentLevelId}`, { replace: true });
     }
-  }, [currentUser, loadedFromRemote, location.pathname, currentLevelId, navigate, clearLoadedFromRemote]);
+  }, [currentUser, loadedFromRemote, location.pathname, currentLevelId, totalXp, navigate, clearLoadedFromRemote]);
 
   return null;
 }

@@ -8,6 +8,7 @@ import { persist } from 'zustand/middleware';
 import type { LevelId, GameState, LevelConfig } from '../types/game';
 import { DEFAULT_LEVELS, INITIAL_HEALTH, MAX_HEALTH, MIN_HEALTH } from '../types/game';
 import { auth } from '../firebase/config';
+import { isFirebaseConfigured } from '../firebase/config';
 
 const STORAGE_KEY = 'cto-simulator-game';
 
@@ -20,6 +21,12 @@ function getGameStorageKey(): string {
 const gameStorage = {
   getItem: (): unknown => {
     try {
+      // When Firebase is configured, auth restores the user asynchronously. If we rehydrate
+      // before auth is ready, we read from "cto-simulator-game" (no uid) and overwrite the
+      // user's progress. So skip rehydration until we know the user (or we're definitely guest).
+      if (isFirebaseConfigured() && !auth?.currentUser) {
+        return null;
+      }
       const s = localStorage.getItem(getGameStorageKey());
       return s ? JSON.parse(s) : null;
     } catch {

@@ -145,11 +145,12 @@ export function Level1ProjectPlanning() {
     setShowBriefing(false);
   }, [decisionsByLevel, level1Completed]);
 
-  // If Firestore never had level 1 progress (new user or fresh level), allow persist after a short delay
+  // If Firestore never had level 1 progress (new user or fresh level), allow persist after a short delay.
+  // Use 1500ms so Firestore has time to load on refresh before we write default state.
   useEffect(() => {
     const t = setTimeout(() => {
       if (!hasRestoredRef.current) hasRestoredRef.current = true;
-    }, 600);
+    }, 1500);
     return () => clearTimeout(t);
   }, []);
 

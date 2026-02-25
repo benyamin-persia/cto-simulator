@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useParams, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase/config';
-import { loadGameState, saveGameState, type GameStateSnapshot } from './firebase/gameSync';
+import { loadGameStateWithTimeout, saveGameState, type GameStateSnapshot } from './firebase/gameSync';
 import { useAuthStore } from './store/authStore';
 import { useGameStore } from './store/gameStore';
 import { GameLayout } from './components/GameLayout';
@@ -49,7 +49,8 @@ function useAuthSync() {
       const loadGameForUser = useGameStore.getState().loadGameForUser;
       if (user) {
         setCurrentUser({ uid: user.uid, email: user.email ?? null });
-        const remoteState = await loadGameState(user.uid);
+        // Use timeout so when Firestore is blocked (e.g. ad blocker) we fall back to localStorage and keep progress
+        const remoteState = await loadGameStateWithTimeout(user.uid);
         loadGameForUser(user.uid, (remoteState ?? undefined) as Record<string, unknown> | undefined);
       } else {
         setCurrentUser(null);

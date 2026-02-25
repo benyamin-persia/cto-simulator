@@ -37,6 +37,20 @@ export async function loadGameState(uid: string): Promise<GameStateSnapshot | nu
   }
 }
 
+/** Max ms to wait for Firestore before falling back to localStorage (e.g. when blocked by extension). */
+const LOAD_TIMEOUT_MS = 4000;
+
+/**
+ * Load game state from Firestore with a timeout. If Firestore is blocked (e.g. ERR_BLOCKED_BY_CLIENT
+ * from an ad blocker) or slow, we return null so the app can load from localStorage and keep progress on this device.
+ */
+export function loadGameStateWithTimeout(uid: string): Promise<GameStateSnapshot | null> {
+  return Promise.race([
+    loadGameState(uid),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), LOAD_TIMEOUT_MS)),
+  ]);
+}
+
 export async function saveGameState(uid: string, state: GameStateSnapshot): Promise<void> {
   if (!db) return;
   try {

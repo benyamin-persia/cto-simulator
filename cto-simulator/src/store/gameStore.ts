@@ -209,7 +209,7 @@ export const useGameStore = create<GameStore>()(
           const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };
           const state = parsed?.state;
           if (state && typeof state === 'object') {
-            set(state as Partial<GameStore>);
+            set({ ...(state as Partial<GameStore>), loadedFromRemote: true });
           }
         } catch {
           // ignore invalid or missing data

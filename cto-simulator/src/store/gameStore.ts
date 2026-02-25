@@ -34,7 +34,30 @@ const gameStorage = {
     }
   },
   setItem: (_name: string, value: unknown): void => {
-    localStorage.setItem(getGameStorageKey(), JSON.stringify(value));
+    // When Firebase is configured and we're writing to the user's key, never overwrite their
+    // saved progress with "initial" state (totalXp 0, level 1, no decisions). That can happen
+    // if a state change (e.g. setCurrentLevel) runs before loadGameForUser, causing persist
+    // to write initial state and wipe totalXp.
+    if (isFirebaseConfigured() && auth?.currentUser && value != null && typeof value === 'object') {
+      const v = value as { state?: Record<string, unknown> };
+      const state = (v?.state ?? v) as Record<string, unknown> | undefined;
+      const totalXp = state?.totalXp;
+      const currentLevelId = state?.currentLevelId;
+      const decisionsByLevel = state?.decisionsByLevel as Record<string, unknown> | undefined;
+      if (
+        state &&
+        (totalXp === 0 || totalXp === undefined) &&
+        (currentLevelId === 1 || currentLevelId === undefined) &&
+        (!decisionsByLevel || Object.keys(decisionsByLevel).length === 0)
+      ) {
+        return;
+      }
+    }
+    try {
+      localStorage.setItem(getGameStorageKey(), JSON.stringify(value));
+    } catch {
+      // ignore quota / security errors
+    }
   },
   removeItem: (): void => {
     localStorage.removeItem(getGameStorageKey());
@@ -198,8 +221,17 @@ export const useGameStore = create<GameStore>()(
       },
 
       loadGameForUser(uid: string, remoteState?: Record<string, unknown>) {
+        const num = (v: unknown): number =>
+          typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' ? Number(v) || 0 : 0;
+        const levelId = (v: unknown): LevelId =>
+          Math.max(1, Math.min(6, num(v) || 1)) as LevelId;
         if (remoteState != null && typeof remoteState === 'object') {
-          set({ ...(remoteState as Partial<GameStore>), loadedFromRemote: true });
+          set({
+            ...(remoteState as Partial<GameStore>),
+            totalXp: num(remoteState.totalXp),
+            currentLevelId: levelId(remoteState.currentLevelId),
+            loadedFromRemote: true,
+          });
           return;
         }
         try {
@@ -212,7 +244,12 @@ export const useGameStore = create<GameStore>()(
             ? (parsed as { state?: Record<string, unknown> }).state
             : (parsed as Record<string, unknown>);
           if (state && typeof state === 'object') {
-            set({ ...(state as Partial<GameStore>), loadedFromRemote: true });
+            set({
+              ...(state as Partial<GameStore>),
+              totalXp: num(state.totalXp),
+              currentLevelId: levelId(state.currentLevelId),
+              loadedFromRemote: true,
+            });
           }
         } catch {
           // ignore invalid or missing data
